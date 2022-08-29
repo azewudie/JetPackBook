@@ -5,12 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.example.googlebooksapi.model.Empty
 import com.example.googlebooksapi.model.Repository
 import com.example.googlebooksapi.model.UIState
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class BookViewModel constructor(private val repository: Repository):ViewModel(){
+@HiltViewModel
+class BookViewModel @Inject constructor(private val repository: Repository):ViewModel(){
 
     private val _uiState: MutableStateFlow<UIState> = MutableStateFlow(Empty)
     val uiState: StateFlow<UIState> get() =_uiState
