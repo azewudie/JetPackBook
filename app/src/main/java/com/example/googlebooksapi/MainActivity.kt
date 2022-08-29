@@ -1,6 +1,7 @@
 package com.example.googlebooksapi
 
 import android.content.ContentValues.TAG
+import android.content.Context
 import android.graphics.Paint
 import android.os.Bundle
 import android.util.Log
@@ -19,6 +20,7 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,61 +33,233 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.NavArgumentBuilder
+import androidx.navigation.NavController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.googlebooksapi.model.*
 import com.example.googlebooksapi.model.remote.BookApi
 import com.example.googlebooksapi.model.remote.BookItem
 import com.example.googlebooksapi.model.remote.BookResponse
+import com.example.googlebooksapi.ui.screens.BookDetails
 import com.example.googlebooksapi.ui.theme.GoogleBooksApiTheme
+import com.example.googlebooksapi.util.*
 import com.example.googlebooksapi.viewModel.BookViewModel
+import com.firebase.ui.auth.AuthUI
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.messaging.FirebaseMessaging
+import dagger.hilt.android.AndroidEntryPoint
 import java.lang.Error
 
 private const val TAG = "MainActivity"
+
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+
+
         super.onCreate(savedInstanceState)
         setContent {
             MainApp {
-                val viewModel: BookViewModel by viewModels(){
-                    object : ViewModelProvider.Factory{
-                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                            return super.create(modelClass)
-                            return BookViewModel(RepositoryImpl(BookApi().api)) as T
+                //It will be a main container in your activity
+                // used to rendr ToolBar/ BottomApp Bar
+                //allong bwith the content
+                val viewModel: BookViewModel by viewModels()
+
+                val navController = rememberNavController()
+
+                NavHost(navController = navController,
+                    startDestination = SEARCH_SCREEN){
+                    composable(
+                        route = SEARCH_SCREEN
+                    ){
+                        SearchScreenStateFull(viewModel = viewModel, navigation =navController ) {
+                            logOutCurrentUser()
+
                         }
                     }
+                    composable(
+                        route = navigateDetailScreen,
+                        arguments = listOf(
+                            navArgument(ARG_BOOK){
+                                type = NavType.ParcelableType<BookItem>(BookItem::class.java)
+                            }
+                        )
+                    ){ backStackEntry->
+                        BookDetails(bookItem = backStackEntry.
+                        arguments?.getParcelable<BookItem>(ARG_BOOK)?:throw Exception("Data is not ready")
+                        )
+                    }
+
                 }
 
-                val uiState =  viewModel.uiState.collectAsState().value
-                 SearchScreen(viewModel)
-                when(uiState){
-                    is Response -> {
-                        BookResponseScreen(uiState.data)
-                    }
-                    is Failure -> {
-                        ErrorScreen(uiState.reason)
-                    }
-                    is Loading -> {
-                        LoadingScreen(uiState.isLoading)
-                    }
-                    is Empty ->{}
-                }
+
+
+//                Scaffold( topBar = {
+//                    MainTopBar{
+//                        logOutCurrentUser()
+//                    }
+//                }) {
+//                    it.toString()
+//                    val viewModel: BookViewModel by viewModels()
+//                    {
+//                        object : ViewModelProvider.Factory{
+//                            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+//                                //return super.create(modelClass)
+//                                return BookViewModel(RepositoryImpl(BookApi().api)) as T
+//                            }
+//                        }
+//                    }
+
+//                    val uiState =  viewModel.uiState.collectAsState().value
+//                    SearchScreen(viewModel)
+//                    when(uiState){
+//                        is Response -> {
+//                            BookResponseScreen(uiState.data){
+//
+//                            }
+//                        }
+//                        is Failure -> {
+//                            ErrorScreen(uiState.reason)
+//                        }
+//                        is Loading -> {
+//                            LoadingScreen(uiState.isLoading)
+//                        }
+//                        is Empty ->{}
+//                    }
+//                }
+
 
 
 
             }
 
         }
+
+        FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w(TAG, "Fetching FCM registration token failed", task.exception)
+                return@OnCompleteListener
+            }
+
+            // Get new FCM registration token
+            val token = task.result
+
+            // Log and toast
+
+            val msg = "fcm token : $token"
+            Log.d("Token", msg)
+            Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+        })
+    }
+
+    fun logOutCurrentUser(){
+        AuthUI.getInstance()
+            .signOut(this)
+            .addOnCompleteListener{
+                Log.d(TAG, "LogOutCurrentUser: ${it.result}")
+            }
     }
 }
 
 @Composable
-fun BookResponseScreen(data:BookResponse){
+fun SearchScreenStateFull(viewModel:BookViewModel,navigation:NavController,logOutCurrentUser: () -> Unit){
+    //It will be a main container in your activity
+    // used to rendr ToolBar/ BottomApp Bar
+    //allong bwith the content
+    Scaffold( topBar = {
+        MainTopBar{
+            logOutCurrentUser()
+        }
+    }) {
+        it.toString()
+      // val viewModel: BookViewModel by viewModels()
+//                    {
+//                        object : ViewModelProvider.Factory{
+//                            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+//                                //return super.create(modelClass)
+//                                return BookViewModel(RepositoryImpl(BookApi().api)) as T
+//                            }
+//                        }
+//                    }
+
+        val uiState =  viewModel.uiState.collectAsState().value
+        SearchScreen(viewModel)
+        when(uiState){
+            is Response -> {
+                BookResponseScreen(uiState.data){bookItem->
+                    navigation.navigate("$DETAIL_SCREEN$bookItem")
+
+                }
+            }
+            is Failure -> {
+                ErrorScreen(uiState.reason)
+            }
+            is Loading -> {
+                LoadingScreen(uiState.isLoading)
+            }
+            is Empty ->{}
+        }
+    }
+}
+
+@Composable
+fun MainTopBar(logOutCurrentUser: ()->Unit ={}) {
+    var menuLogOutIsExpanded: Boolean by remember {
+        mutableStateOf(false)
+    }
+    Log.d(
+        TAG,
+        "MainTopBar:PhotoURl= ${FirebaseAuth.getInstance().currentUser?.photoUrl} " +
+                "${FirebaseAuth.getInstance().currentUser?.displayName}")
+    FirebaseAuth.getInstance().currentUser?.photoUrl
+    FirebaseAuth.getInstance().currentUser?.displayName
+
+
+    TopAppBar(
+        title = {
+            LocalContext.current.getString(R.string.app_name)
+        },
+        actions = {
+            Icon(
+                imageVector = Icons.Filled.Menu,
+                contentDescription = LocalContext.current.getString(R.string.menu),
+                modifier = Modifier.clickable { menuLogOutIsExpanded = true }
+            )
+            DropdownMenu(
+                expanded = menuLogOutIsExpanded,
+                onDismissRequest = { menuLogOutIsExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    onClick = {
+                        menuLogOutIsExpanded = false
+                        logOutCurrentUser
+                    }
+                ) {
+                    Text(text = LocalContext
+                        .current
+                        .getString(R.string.menu))
+                }
+            }
+        }
+    )
+}
+
+
+
+@Composable
+fun BookResponseScreen(data:BookResponse, openDetails:(BookItem)->Unit){
 
     LazyColumn{
         items( data.items.size){position->
             Text(text = "item")
-            BookItemStateLess(data.items[position])
+            BookItemStateLess(data.items[position],openDetails)
 
 
         }
@@ -108,7 +282,8 @@ fun BookResponseScreen(data:BookResponse){
 //)
 //implementation "io.coil-kt:coil-compose:1.4.0"
 @Composable
-fun BookItemStateLess(book:BookItem){
+fun BookItemStateLess(book:BookItem,openDetails:(BookItem)->Unit){
+    Log.d("TESTBOOK", "BookItemStateLess: $book")
     Box(modifier = Modifier
         .padding(
             start = 10.dp, top = 2.dp,
@@ -118,22 +293,27 @@ fun BookItemStateLess(book:BookItem){
     ){
         Row{
             AsyncImage(model = ImageRequest.Builder(LocalContext.current).
-            data(book.volumeInfo.imageLinks.smallThumbnail)
+            data(book.volumeInfo.imageLinks?.smallThumbnail?:"")
                 .crossfade(true)
                 .build(),
                 contentScale = ContentScale.Inside,
                 modifier = Modifier.clip(CircleShape),
                 contentDescription = stringResource(id = R.string.book_cover),
-            placeholder = painterResource(id = R.drawable.ic_baseline_menu_book_24))
+            placeholder = painterResource(id = R.drawable.ic_baseline_menu_book_24),
+                error = painterResource(id = R.drawable.ic_baseline_menu_book_24)
+            )
 
             Spacer(modifier = Modifier.width(10.dp))
             Column() {
-                Text(text = book.volumeInfo.title)
+                Text(text = book.volumeInfo?.title!!,
+                modifier = Modifier.clickable {
+                    openDetails(book)
+                })
                 Row(){
-                    Text(text = book.volumeInfo.authors.toString())
+                    Text(text = book.volumeInfo?.authors.toString())
                     Text(text=book.volumeInfo.publishedDate)
                 }
-                Text(text =book.volumeInfo.description)
+                Text(text = book.volumeInfo.description?:"hello")
 
 
 
@@ -152,7 +332,7 @@ fun LoadingScreen(isLoading: Boolean){
     Log.d(TAG, "LoadingScreen: $isLoading")
 }
 @Composable
-fun ErrorScreen(reason:Error){
+fun ErrorScreen(reason:String){
     Log.d("resason", "LoadingScreen: $reason")
 }
 @Composable
@@ -276,16 +456,14 @@ fun BookPrintType(selected :(String)->Unit) {
 }
 
 
-
-@Preview(showBackground = false)
-@Composable
-fun SearchScreenPreview(){
-    val viewModel:BookViewModel  = BookViewModel()
-    MainApp {
-        SearchScreen(viewModel = viewModel)
-    }
-
-
-
-
-}
+//
+//@Preview(showBackground = false)
+//@Composable
+//fun SearchScreenPreview(){
+//    val viewModel:BookViewModel  = BookViewModel()
+//    MainApp {
+//        SearchScreen(viewModel = viewModel)
+//    }
+//
+//
+//}
