@@ -12,4 +12,5 @@
         </item>
     </string-array>
     <string name="book_cover">This is a book cover</string>
+    <string name="menu">Main Menu</string>
 </resources>
