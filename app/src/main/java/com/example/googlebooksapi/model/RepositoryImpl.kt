@@ -1,11 +1,12 @@
 package com.example.googlebooksapi.model
 
+import com.example.googlebooksapi.model.remote.BookApi
 import com.example.googlebooksapi.model.remote.BookService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
-class RepositoryImpl constructor(private val bookService: BookService):Repository{
+class RepositoryImpl constructor(private val bookService: BookApi):Repository{
     override fun getBookByName(bookTitle: String, bookSize: String, printType: String): Flow<UIState> {
         return flow{
             /**
@@ -19,7 +20,7 @@ class RepositoryImpl constructor(private val bookService: BookService):Repositor
 
             emit(Loading())
             delay(600)
-            val response = bookService.getBook(bookTitle,bookSize,printType)
+            val response = bookService.api.getBook(bookTitle,bookSize,printType)
 
             if(response.isSuccessful){
                 response.body()?.let{
