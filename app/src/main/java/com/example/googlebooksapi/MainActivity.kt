@@ -2,6 +2,7 @@ package com.example.googlebooksapi
 
 import android.content.ContentValues.TAG
 import android.content.Context
+import android.graphics.Color
 import android.graphics.Paint
 import android.os.Bundle
 import android.util.Log
@@ -9,6 +10,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.twotone.Check
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -190,7 +193,14 @@ fun SearchScreenStateFull(viewModel:BookViewModel,navigation:NavController,logOu
 //                    }
 
         val uiState =  viewModel.uiState.collectAsState().value
+
+        Column() {
+
+
+
+
         SearchScreen(viewModel)
+
         when(uiState){
             is Response -> {
                 BookResponseScreen(uiState.data){bookItem->
@@ -206,6 +216,7 @@ fun SearchScreenStateFull(viewModel:BookViewModel,navigation:NavController,logOu
             }
             is Empty ->{}
         }
+    }
     }
 }
 
@@ -350,8 +361,11 @@ fun MainApp(context: @Composable () -> Unit){
 
 
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun SearchScreen(viewModel:BookViewModel){
+    val ebookSate = ChipState.C_Ebooks()
+
 
 
     var bookQuery:String by remember {
@@ -388,6 +402,25 @@ fun SearchScreen(viewModel:BookViewModel){
                selectedPrintType =printType
 
             }
+            Spacer(modifier = Modifier.height(3.dp))
+            Chip(onClick = {
+                ebookSate.isChecked = true
+            }) {
+
+                Row(horizontalArrangement = Arrangement.SpaceBetween){
+
+
+                Text(text = "Search")
+                AnimatedVisibility(visible =   ebookSate.isChecked) {
+
+                }
+
+                Text(text = "Book")
+
+              Image(imageVector = Icons.TwoTone.Check, contentDescription ="Felter opetion Ebook"
+           )
+                }
+            }
 
 
             Button(onClick = {
@@ -399,12 +432,25 @@ fun SearchScreen(viewModel:BookViewModel){
 
                 ) {
                 Text(text = "Search")
+
             }
         }
 
     }
 
 }
+
+sealed class ChipState{
+    data class C_Ebooks(var isChecked: Boolean = false):ChipState()
+    data class C_Free(var isChecked: Boolean = false):ChipState()
+    data class C_Full(var isChecked: Boolean = false):ChipState()
+}
+
+//enum class  ChipsState(val isChecked:Boolean){
+//    C1_C(true),
+//    C1_NC(false)
+//
+//}
 
 @Composable
 fun BookPrintType(selected :(String)->Unit) {

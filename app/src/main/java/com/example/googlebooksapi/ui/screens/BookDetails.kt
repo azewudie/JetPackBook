@@ -30,9 +30,7 @@ fun BookDetails(bookItem: BookItem){
         BookDetailHeader(bookItem  )
         Spacer(modifier = Modifier.fillMaxWidth(0.5f))
         BookDetailBody(bookItem)
-
     }
-
 
 }
 
